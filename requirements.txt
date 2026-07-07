@@ -1,0 +1,9 @@
+# 모노레포 전체를 하나의 venv에 editable 설치합니다(순서: 하위 패키지 -> 앱).
+-e packages/shared
+-e packages/pdf_engine
+-e packages/accounting_engine
+-e packages/accounting_data
+-e packages/ml_pipeline
+-e packages/dart_integration
+-e apps/api-server
+-e apps/worker

@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>법인 기장 Admin</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <h1>법인 기장 PDF 생성 모듈 — Admin</h1>
+  <p class="subtitle">회사/계정과목/분개/증빙/보고서/ML/DART 연동 관리 콘솔 (Vanilla JS, 번들러 없음)</p>
+
+  <section>
+    <h2>API 설정</h2>
+    <div class="row">
+      <label>API Base
+        <input id="apiBase" value="http://localhost:8081" size="30" />
+      </label>
+      <label>기본 회사 ID
+        <input id="companyId" value="CORP-0001" size="16" />
+      </label>
+    </div>
+  </section>
+
+  <div class="grid2">
+    <section>
+      <h2>1) 회사 등록/조회</h2>
+      <div class="row">
+        <label>법인명 <input id="corpName" placeholder="주식회사 ..." /></label>
+        <label>사업자번호 <input id="corpBizNo" placeholder="123-45-67890" /></label>
+        <button onclick="createCompany()">등록</button>
+        <button class="secondary" onclick="listCompanies()">목록 조회</button>
+      </div>
+      <div id="companiesMsg" class="msg"></div>
+      <pre id="companiesOut" class="output"></pre>
+    </section>
+
+    <section>
+      <h2>2) 계정과목(Chart of Accounts)</h2>
+      <button onclick="listAccounts()">계정과목 조회</button>
+      <pre id="accountsOut" class="output"></pre>
+    </section>
+  </div>
+
+  <section>
+    <h2>3) 분개 등록 / 조회</h2>
+    <div class="row">
+      <label>일자 <input id="jeDate" type="date" value="2026-07-01" /></label>
+      <label>적요 <input id="jeDesc" size="30" placeholder="예: 거래처 접대 - 한정식당" /></label>
+      <button onclick="suggestAccount()">🤖 계정과목 추천(ML)</button>
+    </div>
+    <div class="row">
+      <label>차변 계정 <input id="jeDebitAccount" placeholder="813" size="6" /></label>
+      <label>차변 금액 <input id="jeDebitAmount" type="number" placeholder="60000" /></label>
+      <label>대변 계정 <input id="jeCreditAccount" placeholder="102" size="6" /></label>
+      <label>대변 금액 <input id="jeCreditAmount" type="number" placeholder="60000" /></label>
+      <button onclick="createJournalEntry()">분개 등록</button>
+    </div>
+    <div id="journalMsg" class="msg"></div>
+    <div class="row">
+      <button class="secondary" onclick="listJournalEntries()">회사별 분개 목록</button>
+      <label>Entry ID 조회 <input id="jeLookupId" placeholder="JE-..." /></label>
+      <button class="secondary" onclick="getJournalEntry()">조회(분류결과 포함)</button>
+    </div>
+    <pre id="journalOut" class="output"></pre>
+  </section>
+
+  <section>
+    <h2>4) 증빙(영수증/세금계산서) 업로드 → OCR</h2>
+    <div class="row">
+      <label>증빙 유형
+        <select id="voucherType"><option value="receipt">receipt</option><option value="tax_invoice">tax_invoice</option></select>
+      </label>
+      <label>파일 <input id="voucherFile" type="file" /></label>
+      <button onclick="uploadVoucher()">업로드(비동기 OCR 트리거)</button>
+    </div>
+    <div class="row">
+      <label>Voucher ID 조회 <input id="voucherLookupId" placeholder="VCH-..." /></label>
+      <button class="secondary" onclick="getVoucher()">OCR 결과 조회</button>
+    </div>
+    <div id="voucherMsg" class="msg"></div>
+    <pre id="voucherOut" class="output"></pre>
+  </section>
+
+  <div class="grid2">
+    <section>
+      <h2>5) 이상거래 탐지 (IsolationForest)</h2>
+      <button onclick="loadAnomalies()">이상거래 조회</button>
+      <pre id="anomaliesOut" class="output"></pre>
+    </section>
+
+    <section>
+      <h2>6) 현금흐름/매출 예측 (Holt 지수평활)</h2>
+      <div class="row">
+        <label>지표 <select id="forecastMetric"><option value="revenue">revenue</option><option value="cash_flow">cash_flow</option></select></label>
+        <button onclick="loadForecast()">예측 실행</button>
+      </div>
+      <pre id="forecastOut" class="output"></pre>
+    </section>
+  </div>
+
+  <section>
+    <h2>7) PDF 보고서 생성</h2>
+    <div class="row">
+      <label>보고서 유형
+        <select id="reportType">
+          <option value="financial_statement">재무제표(BS+IS)</option>
+          <option value="ledger">총계정원장/분개장</option>
+          <option value="tax_summary">세금계산서 정리표</option>
+          <option value="closing_report">결산보고서(+ML 요약)</option>
+          <option value="company_dashboard">기업 대시보드(제조원가/유형자산/수출비중)</option>
+        </select>
+      </label>
+      <label>기간 시작 <input id="reportStart" type="date" value="2026-01-01" /></label>
+      <label>기간 종료 <input id="reportEnd" type="date" value="2026-06-30" /></label>
+      <button onclick="generateReport()">생성 요청</button>
+    </div>
+    <div class="row">
+      <label>Report ID 조회 <input id="reportLookupId" placeholder="RPT-..." /></label>
+      <button class="secondary" onclick="getReport()">상태 조회</button>
+      <button class="secondary" onclick="downloadReport()">PDF 다운로드</button>
+    </div>
+    <div id="reportMsg" class="msg"></div>
+    <pre id="reportOut" class="output"></pre>
+  </section>
+
+  <section>
+    <h2>8) 기업 대시보드 (웹, 즉시 조회)</h2>
+    <button onclick="loadDashboard()">대시보드 조회</button>
+    <pre id="dashboardOut" class="output"></pre>
+  </section>
+
+  <section>
+    <h2>9) OpenDART(전자공시) 회사 검색 → 재무제표 재현</h2>
+    <div class="row">
+      <label>회사명 검색 <input id="dartName" placeholder="삼성전자" /></label>
+      <button onclick="searchDart()">검색</button>
+    </div>
+    <div class="row">
+      <label>corp_code <input id="dartCorpCode" placeholder="00126380" /></label>
+      <label>corp_name <input id="dartCorpName" placeholder="삼성전자" /></label>
+      <label>사업연도 <input id="dartYear" value="2023" size="6" /></label>
+      <button onclick="regenerateDart()">우리 템플릿으로 재현(PDF)</button>
+    </div>
+    <div id="dartMsg" class="msg"></div>
+    <pre id="dartOut" class="output"></pre>
+  </section>
+
+  <script src="app.js"></script>
+</body>
+</html>

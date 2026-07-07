@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "corp-api-server"
+version = "0.1.0"
+description = "법인 기장 PDF 생성 모듈 REST API (Flask)"
+requires-python = ">=3.10"
+dependencies = [
+  "flask>=3.0",
+  "flask-cors>=4.0",
+  "psycopg2-binary>=2.9",
+  "rq>=1.16",
+  "redis>=5.0",
+  "corp-shared",
+  "corp-accounting-data",
+  "corp-accounting-engine",
+  "corp-ml-pipeline",
+  "corp-dart-integration",
+]
+
+[tool.setuptools.packages.find]
+include = ["api_server*"]

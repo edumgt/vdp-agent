@@ -1,17 +1,24 @@
-FROM node:20-alpine
+FROM python:3.12-slim
 WORKDIR /app
-COPY package.json package-lock.json* ./
-COPY apps/pdf-worker/package.json apps/pdf-worker/package.json
-COPY packages/layout-engine/package.json packages/layout-engine/package.json
-COPY packages/pdf-engine/package.json packages/pdf-engine/package.json
-COPY packages/shared/package.json packages/shared/package.json
 
-RUN npm install --omit=dev || npm install
-
-COPY apps/pdf-worker apps/pdf-worker
 COPY packages packages
-COPY scripts scripts
+COPY apps/worker apps/worker
+
+RUN pip install --no-cache-dir \
+      -e packages/shared \
+      -e packages/pdf_engine \
+      -e packages/accounting_engine \
+      -e packages/accounting_data \
+      -e packages/ml_pipeline \
+      -e packages/dart_integration \
+      -e apps/worker
+
+# EasyOCR(실제 DL 모델)을 쓰려면 빌드 시 --build-arg WITH_OCR=1
+ARG WITH_OCR=0
+COPY requirements-ocr.txt requirements-ocr.txt
+RUN if [ "$WITH_OCR" = "1" ]; then pip install --no-cache-dir -r requirements-ocr.txt; fi
+
 COPY docs docs
 COPY infra infra
 
-CMD ["node", "apps/pdf-worker/src/worker.js"]
+CMD ["python", "apps/worker/run_worker.py"]

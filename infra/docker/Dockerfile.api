@@ -1,18 +1,21 @@
-FROM node:20-alpine
+FROM python:3.12-slim
 WORKDIR /app
-COPY package.json package-lock.json* ./
-COPY apps/api-server/package.json apps/api-server/package.json
-COPY packages/layout-engine/package.json packages/layout-engine/package.json
-COPY packages/pdf-engine/package.json packages/pdf-engine/package.json
-COPY packages/shared/package.json packages/shared/package.json
 
-RUN npm install --omit=dev || npm install
-
-COPY apps/api-server apps/api-server
 COPY packages packages
-COPY scripts scripts
+COPY apps/api-server apps/api-server
+COPY requirements.txt requirements.txt
+
+RUN pip install --no-cache-dir \
+      -e packages/shared \
+      -e packages/pdf_engine \
+      -e packages/accounting_engine \
+      -e packages/accounting_data \
+      -e packages/ml_pipeline \
+      -e packages/dart_integration \
+      -e apps/api-server
+
 COPY docs docs
 COPY infra infra
 
 EXPOSE 8081
-CMD ["node", "apps/api-server/src/server.js"]
+CMD ["python", "apps/api-server/wsgi.py"]

@@ -2,4 +2,13 @@ node_modules
 dist
 .env
 storage/pdfs/*.pdf
+storage/uploads/*
 .DS_Store
+.venv/
+.cache/
+assets/fonts/*.ttf
+assets/fonts/*.otf
+assets/fonts/*.ttc
+__pycache__/
+*.pyc
+*.egg-info/

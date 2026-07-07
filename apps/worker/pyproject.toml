@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "corp-worker"
+version = "0.1.0"
+description = "RQ 워커: 증빙 OCR / 계정과목 분류 / PDF 보고서 생성 / DART 재현"
+requires-python = ">=3.10"
+dependencies = [
+  "rq>=1.16",
+  "redis>=5.0",
+  "corp-shared",
+  "corp-accounting-data",
+  "corp-accounting-engine",
+  "corp-pdf-engine",
+  "corp-ml-pipeline",
+  "corp-dart-integration",
+]
+
+[tool.setuptools.packages.find]
+include = ["worker_jobs*"]

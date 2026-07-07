@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>법인 기장 포털</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <h1>법인 기장 포털</h1>
+  <p class="subtitle">증빙 업로드와 기장 보고서 다운로드를 위한 법인 담당자용 화면 (Vanilla JS)</p>
+
+  <section>
+    <h2>API 설정</h2>
+    <div class="row">
+      <label>API Base <input id="apiBase" value="http://localhost:8081" size="30" /></label>
+      <label>회사 ID <input id="companyId" value="CORP-0001" size="16" /></label>
+    </div>
+  </section>
+
+  <section>
+    <h2>1) 증빙(영수증/세금계산서) 업로드</h2>
+    <div class="row">
+      <label>증빙 유형
+        <select id="voucherType"><option value="receipt">영수증</option><option value="tax_invoice">세금계산서</option></select>
+      </label>
+      <label>파일 <input id="voucherFile" type="file" /></label>
+      <button onclick="uploadVoucher()">업로드</button>
+    </div>
+    <div id="voucherMsg" class="msg"></div>
+    <div class="row">
+      <label>증빙 상태 조회 <input id="voucherLookupId" placeholder="VCH-..." /></label>
+      <button class="secondary" onclick="getVoucher()">조회</button>
+    </div>
+    <pre id="voucherOut" class="output"></pre>
+  </section>
+
+  <section>
+    <h2>2) 기장 보고서 생성 요청</h2>
+    <div class="row">
+      <label>보고서 유형
+        <select id="reportType">
+          <option value="financial_statement">재무제표</option>
+          <option value="ledger">총계정원장/분개장</option>
+          <option value="tax_summary">세금계산서 정리표</option>
+          <option value="closing_report">결산보고서</option>
+          <option value="company_dashboard">기업 대시보드</option>
+        </select>
+      </label>
+      <label>기간 시작 <input id="reportStart" type="date" value="2026-01-01" /></label>
+      <label>기간 종료 <input id="reportEnd" type="date" value="2026-06-30" /></label>
+      <button onclick="generateReport()">생성 요청</button>
+    </div>
+    <div id="reportMsg" class="msg"></div>
+    <div class="row">
+      <label>Report ID <input id="reportLookupId" placeholder="RPT-..." /></label>
+      <button class="secondary" onclick="checkStatus()">상태 확인</button>
+      <button onclick="downloadReport()">PDF 다운로드</button>
+    </div>
+    <pre id="reportOut" class="output"></pre>
+  </section>
+
+  <script src="app.js"></script>
+</body>
+</html>

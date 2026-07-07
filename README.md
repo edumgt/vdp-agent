@@ -1,89 +1,107 @@
-# 다국어 맞춤형 자동 조판(VDP) 시스템 — MVP Monorepo
+# 법인 기장(회계) PDF 생성 모듈 — AI/ML 기반 회계 자동화 플랫폼
 
-본 레포는 맞춤형 자동 조판 시스템 MVP를 위한 **풀 스캐폴딩**입니다.
+본 레포는 법인의 회계 데이터를 기반으로 **재무제표/총계정원장·분개장/세금계산서 정리표/결산보고서/기업 대시보드** PDF를 생성하고,
+증빙 OCR·계정과목 자동분류·이상거래 탐지·현금흐름 예측 등 **ML/DL 파이프라인**을 결합한 회계 자동화 모듈입니다.
+추가로 **OpenDART(전자공시시스템)** 연동을 통해 외부 공시 기업을 검색하고, 해당 재무제표를 본 모듈의 PDF 템플릿으로 재현할 수 있습니다.
 
-- 사용자: **4개 언어(메인 1 + 서브 3)** 선택 + 개인화 데이터 `{
-  NAME, DATE
-}` 입력
-- 서버: 원고/템플릿/폰트 프리셋을 매핑하여 **Render Tree(조판 결과)** 생성 → 인쇄용 PDF 생성
-- 개인화 범위: **Cover / Opening / Closing 3페이지 한정**
-- 인쇄 조건(요구사항): 8.5x11 inch, 300dpi 이상 품질 목표, CMYK 대응 설계, Bleed(도련) 적용, 폰트 Full Embedding(지정 TTF/OTF)
+- 백엔드/ML/PDF 엔진: **Python** (Flask + RQ + scikit-learn + statsmodels + ReportLab)
+- 프론트엔드: **Vanilla JS**(프레임워크/번들러 없음)
+- 인프라: Postgres / Redis / (옵션)MinIO / Docker Compose
 
-> ⚠️ 주의(중요): PDF/X 완전 준수(PDF/X-1a/X-4) 및 CMYK ICC/오버프린트 등 프리프레스 고급 항목은 **인쇄소 워크플로우/툴체인 영향이 큰 영역**입니다. 본 MVP는 **PDF/X 대응 가능한 구조 + Preflight 리포트(검사 스크립트)**까지 포함하며, 완전 준수는 2차 범위로 확장 권장합니다. 자세한 내용은 `docs/06_preflight_checklist.md` 참고.
+> ⚠️ 도입한 ML/DL 알고리즘의 문제정의·선택이유·한계·프로덕션 고도화 경로는 `docs/08_techstack_workflow.md`에 상세히 기술되어 있습니다.
 
 ---
 
 ## 빠른 시작(로컬)
 
 ### 1) 요구사항
-- Node.js 18+
-- Docker / Docker Compose
+- Python 3.10+
+- Docker / Docker Compose (Postgres/Redis 로컬 기동용)
 
 ### 2) 실행
 ```bash
 # 1) 환경변수 준비
 cp .env.example .env
 
-# 2) 인프라(POSTGRES/REDIS/MINIO) 올리기
-npm run dev
+# 2) 인프라(Postgres/Redis/MinIO) 기동
+python scripts/dev_up.py            # 또는: docker compose -f infra/docker/docker-compose.yml up -d
 
-# 3) DB 마이그레이션/샘플 데이터 시드
-npm run db:migrate
-npm run db:seed
+# 3) 파이썬 가상환경 + 의존성 설치
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+pip install -r requirements-dev.txt  # 테스트/린트용(선택)
 
-# 4) API / Worker / Web 실행(기본은 docker compose로 같이 올라옵니다)
-# - API: http://localhost:8081
-# - Client: http://localhost:3001
-# - Admin: http://localhost:3002
+# 4) DB 마이그레이션/시드
+python scripts/db_migrate.py
+python scripts/db_seed.py
+
+# 5) 폰트 배치 (라이선스 확인된 TTF/OTF를 assets/fonts에 배치, 레포에는 미포함)
+#    docs/04_font_policy.md 참고
+
+# 6) API 서버 / 워커 실행
+python apps/api-server/wsgi.py            # http://localhost:8081
+python apps/worker/run_worker.py           # 별도 터미널
+
+# 7) 프론트엔드(정적 서빙, 번들러 불필요)
+python -m http.server 3002 --directory apps/web-admin   # 관리자 콘솔
+python -m http.server 3001 --directory apps/web-client  # 법인 담당자 포털
 ```
 
-### 3) 샘플 주문 → PDF 생성
+### 3) 샘플 보고서 생성 (API 없이 바로 확인)
 ```bash
-curl -X POST http://localhost:8081/api/orders \
+python scripts/demo_generate_reports.py
+# storage/pdfs/demo_*.pdf 5종 생성 확인
+```
+
+### 4) API로 전체 플로우 확인
+```bash
+curl -X POST http://localhost:8081/api/reports/generate \
   -H "Content-Type: application/json" \
-  -d '{
-    "book_id": "JOY-001",
-    "main_lang": "en",
-    "sub_langs": ["ko","fr","vi"],
-    "name": "Joya",
-    "date": "2026-02-19"
-  }'
-```
+  -d '{"company_id":"CORP-0001","report_type":"closing_report","period_start":"2026-01-01","period_end":"2026-06-30","as_of_date":"2026-06-30"}'
+# -> {"report_id": "RPT-...", "status": "pending"}
 
-응답에서 `order_id`를 확인 후:
-```bash
-curl -X POST http://localhost:8081/api/orders/<ORDER_ID>/generate
-curl http://localhost:8081/api/orders/<ORDER_ID>
-curl -L http://localhost:8081/api/orders/<ORDER_ID>/pdf -o output.pdf
+curl http://localhost:8081/api/reports/<REPORT_ID>
+curl -L http://localhost:8081/api/reports/<REPORT_ID>/pdf -o report.pdf
 ```
 
 ---
 
 ## 문서
-- 프로젝트 개요/범위/수용 기준: `docs/01_requirements.md`
-- 아키텍처/워크플로우(mermaid 포함): `docs/02_architecture.md`
-- 템플릿 JSON 규격: `docs/03_template_spec.md`
+- 개요: `docs/00_overview.md`
+- 요구사항/범위: `docs/01_requirements.md`
+- 아키텍처/워크플로우(mermaid): `docs/02_architecture.md`
+- 렌더트리/문서 템플릿 규격: `docs/03_template_spec.md`
 - 폰트 정책(임베딩/라이선스): `docs/04_font_policy.md`
-- API 명세(요약): `docs/05_api_spec.md`
-- Preflight 체크리스트: `docs/06_preflight_checklist.md`
+- API 명세: `docs/05_api_spec.md`
+- 산출물 검증 체크리스트: `docs/06_preflight_checklist.md`
 - 배포 가이드(Docker): `docs/07_deploy_guide.md`
-- 기술스택/전체 워크플로우(mermaid): `docs/08_techstack_workflow.md`
+- **기술스택 & ML/DL 알고리즘 상세**: `docs/08_techstack_workflow.md`
 
 ---
 
 ## 레포 구조
-- `apps/api-server` : 주문/원고/템플릿 CRUD + PDF 생성 Job enqueue
-- `apps/pdf-worker` : BullMQ Worker(조판 + PDF 생성)
-- `apps/web-client` : 사용자 웹(언어 선택/개인화/생성/다운로드)
-- `apps/web-admin` : 관리자 웹(원고/템플릿/폰트 프리셋/주문 관리)
-- `packages/layout-engine` : 줄바꿈/레이아웃(Render Tree) 생성
-- `packages/pdf-engine` : PDF 생성(폰트 임베딩/bleed/box) 스캐폴딩
-- `infra/docker/docker-compose.yml` : Postgres/Redis/MinIO/API/Worker/Web 구성
+```
+apps/
+  api-server/   Flask REST API
+  worker/       RQ 워커(OCR/분류/PDF생성/DART재현 비동기 작업)
+  web-admin/    관리자 콘솔 (Vanilla JS)
+  web-client/   법인 담당자 포털 (Vanilla JS)
+packages/
+  shared/             공통 유틸
+  pdf_engine/         ReportLab 렌더러(text/table/bar_chart, 폰트 임베딩, bleed)
+  accounting_engine/  원장/재무제표/세금계산서정리표/결산보고서/제조원가명세서/유형자산/기업대시보드 빌더
+  accounting_data/    api-server/worker 공용 Postgres 조회 헬퍼
+  ml_pipeline/        OCR+정보추출 / 계정과목분류 / 이상거래탐지 / 현금흐름·매출예측
+  dart_integration/   OpenDART 연동(회사검색/재무제표 수집) + 내부 템플릿 재현
+infra/
+  db/       마이그레이션/시드 SQL
+  docker/   Dockerfile들 + docker-compose.yml
+scripts/    dev_up/down, db_migrate/seed, lint, test, train_classifier, demo_generate_reports
+```
 
 ---
 
 ## 라이선스/폰트
 본 레포는 **폰트 바이너리(.ttf/.otf)를 포함하지 않습니다.**
-- 회사/프로젝트에서 사용 가능한 **임베딩 허용 폰트**를 `assets/fonts`에 배치하세요.
+- 임베딩 허용 폰트를 `assets/fonts`에 배치하고 `.env`의 `FONTS_DIR`을 확인하세요.
 - 자세한 정책은 `docs/04_font_policy.md` 참고.
-

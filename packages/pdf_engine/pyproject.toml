@@ -1,0 +1,13 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "corp-pdf-engine"
+version = "0.1.0"
+description = "ReportLab 기반 렌더트리 -> PDF 렌더러 (text/table/bar_chart, 폰트 임베딩, bleed)"
+requires-python = ">=3.10"
+dependencies = ["reportlab>=4.0"]
+
+[tool.setuptools.packages.find]
+include = ["pdf_engine*"]

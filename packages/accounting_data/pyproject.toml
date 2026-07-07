@@ -1,0 +1,13 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "corp-accounting-data"
+version = "0.1.0"
+description = "api-server/worker가 공유하는 Postgres 조회 헬퍼(accounting_engine/ml_pipeline 입력 형태로 정규화)"
+requires-python = ">=3.10"
+dependencies = ["psycopg2-binary>=2.9"]
+
+[tool.setuptools.packages.find]
+include = ["accounting_data*"]
